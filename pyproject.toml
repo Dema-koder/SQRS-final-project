@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "finance-tracker"
+version = "0.1.0"
+description = "Personal Finance Tracker API"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "finance_tracker"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.109.0"
+uvicorn = "^0.27.0"
+python-jose = "^3.3.0"
+passlib = "^1.7.4"
+python-multipart = "^0.0.6"
+bcrypt = "^4.1.2"
+pydantic = "^2.5.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+httpx = "^0.26.0"
+flake8 = "^6.1.0"
+black = "^23.12.1"
+isort = "^5.13.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
