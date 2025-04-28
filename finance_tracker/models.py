@@ -94,3 +94,18 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+class TransactionUpdate(BaseModel):
+    amount: Optional[float] = None
+    description: Optional[str] = None
+    date: Optional[datetime] = None
+    category_id: Optional[int] = None
+    type: Optional[str] = None
+    is_recurring: Optional[bool] = None
+    recurrence_pattern: Optional[str] = None
+
+    @validator('type')
+    def validate_type(cls, v):
+        if v is not None and v.lower() not in ['income', 'expense']:
+            raise ValueError("Type must be either 'income' or 'expense'")
+        return v.lower() if v else v

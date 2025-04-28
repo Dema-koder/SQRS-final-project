@@ -2,13 +2,19 @@ from fastapi import FastAPI, Depends, HTTPException, status, Security
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from typing import Annotated
+from typing import List
+from fastapi import Query, Path
 import sqlite3
 import bcrypt
 import secrets
 from jose import JWTError, jwt
 from finance_tracker.models import *
+from finance_tracker.models import TransactionUpdate
 
 app = FastAPI()
+
+# edited transaction(create_transaction + id transaction)
+# delete transaction(id transaction)
 
 # Database setup
 from finance_tracker.database import setup_database, get_db_connection
@@ -164,7 +170,7 @@ async def get_transactions(
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)],
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        category_id: Optional[int] = None,
+        category_id: str = Query(None, description="Comma-separated category IDs"),  # Принимаем строку
         type_: Optional[str] = None
 ):
     conn = get_db_connection()
@@ -184,9 +190,20 @@ async def get_transactions(
         if end_date:
             query += " AND date <= ?"
             params.append(end_date.isoformat())
+
+        # Обрабатываем category_id
         if category_id:
-            query += " AND category_id = ?"
-            params.append(category_id)
+            try:
+                category_ids = [int(id.strip()) for id in category_id.split(",")]
+                placeholders = ','.join(['?'] * len(category_ids))
+                query += f" AND category_id IN ({placeholders})"
+                params.extend(category_ids)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="category_id must be comma-separated integers"
+                )
+
         if type_:
             query += " AND type = ?"
             params.append(type_.lower())
@@ -194,7 +211,6 @@ async def get_transactions(
         query += " ORDER BY date DESC"
 
         transactions = conn.execute(query, params).fetchall()
-
         return [dict(txn) for txn in transactions]
     finally:
         conn.close()
@@ -344,5 +360,80 @@ async def get_summary(
             "net_balance": (summary["total_income"] or 0) - (summary["total_expenses"] or 0),
             "expenses_by_category": [dict(row) for row in categories]
         }
+    finally:
+        conn.close()
+
+
+@app.patch("/transactions/{transaction_id}", response_model=Transaction)
+async def update_transaction(
+        transaction_id: int,  # Обязательный параметр пути
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)],  # Зависимость
+        transaction_update: TransactionUpdate  # Тело запроса
+):
+    conn = get_db_connection()
+    try:
+        # Проверяем существование транзакции и принадлежность пользователю
+        existing = conn.execute(
+            "SELECT * FROM transactions WHERE id = ? AND user_id = ?",
+            (transaction_id, current_user["id"])
+        ).fetchone()
+
+        if not existing:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        # Собираем поля для обновления
+        update_fields = {}
+        if transaction_update.amount is not None:
+            update_fields["amount"] = transaction_update.amount
+        if transaction_update.description is not None:
+            update_fields["description"] = transaction_update.description
+        if transaction_update.date is not None:
+            update_fields["date"] = transaction_update.date
+        if transaction_update.category_id is not None:
+            update_fields["category_id"] = transaction_update.category_id
+        if transaction_update.type is not None:
+            update_fields["type"] = transaction_update.type
+        if transaction_update.is_recurring is not None:
+            update_fields["is_recurring"] = transaction_update.is_recurring
+        if transaction_update.recurrence_pattern is not None:
+            update_fields["recurrence_pattern"] = transaction_update.recurrence_pattern
+
+        if not update_fields:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        # Проверяем существование категории, если она указана
+        if "category_id" in update_fields:
+            category = conn.execute(
+                "SELECT 1 FROM categories WHERE id = ? AND (user_id = ? OR is_predefined = 1)",
+                (update_fields["category_id"], current_user["id"])
+            ).fetchone()
+            if not category:
+                raise HTTPException(status_code=400, detail="Invalid category_id")
+
+        # Формируем SQL запрос
+        set_clause = ", ".join(f"{field} = ?" for field in update_fields.keys())
+        values = list(update_fields.values())
+        values.extend([transaction_id, current_user["id"]])
+
+        cursor = conn.cursor()
+        cursor.execute(
+            f"UPDATE transactions SET {set_clause} WHERE id = ? AND user_id = ?",
+            values
+        )
+        conn.commit()
+
+        # Возвращаем обновленную транзакцию
+        updated_transaction = conn.execute(
+            """SELECT id, user_id, category_id, amount, description, 
+                  date, type, is_recurring, recurrence_pattern, created_at 
+               FROM transactions WHERE id = ?""",
+            (transaction_id,)
+        ).fetchone()
+
+        return dict(updated_transaction)
+
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
     finally:
         conn.close()
