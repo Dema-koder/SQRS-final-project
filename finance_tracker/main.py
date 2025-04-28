@@ -13,9 +13,6 @@ from finance_tracker.models import TransactionUpdate
 
 app = FastAPI()
 
-# edited transaction(create_transaction + id transaction)
-# delete transaction(id transaction)
-
 # Database setup
 from finance_tracker.database import setup_database, get_db_connection
 setup_database()
@@ -435,5 +432,48 @@ async def update_transaction(
     except sqlite3.IntegrityError as e:
         conn.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+@app.delete("/transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_transaction(
+        transaction_id: int,
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
+):
+    conn = get_db_connection()
+    try:
+        # Проверяем существование транзакции и принадлежность пользователю
+        transaction = conn.execute(
+            "SELECT id FROM transactions WHERE id = ? AND user_id = ?",
+            (transaction_id, current_user["id"])
+        ).fetchone()
+
+        if not transaction:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Transaction not found or access denied"
+            )
+
+        # Удаляем транзакцию
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM transactions WHERE id = ?",
+            (transaction_id,)
+        )
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Transaction not found"
+            )
+
+        conn.commit()
+
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
     finally:
         conn.close()
