@@ -1,227 +1,197 @@
-# To set up dependencies:
-# poetry add streamlit pandas plotly requests
-
-import os
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import requests
 from datetime import datetime
-from typing import Optional
-
-API_URL = st.secrets.get("api_url", "http://localhost:8000")
+import api
+ 
+st.set_page_config(layout="wide")
 
 if "token" not in st.session_state:
     with st.sidebar:
         st.title("🔐 Authentication")
-
         mode = st.radio("Select action", ["Login", "Register"])
-
         if mode == "Login":
-            st.subheader("Login")
-            username = st.text_input("Username", key="login_user")
-            password = st.text_input("Password", type="password", key="login_pw")
+            u = st.text_input("Username", key="login_user")
+            p = st.text_input("Password", type="password", key="login_pw")
             if st.button("Login"):
-                resp = requests.post(
-                    f"{API_URL}/token",
-                    data={"username": username, "password": password},
-                )
-                if resp.status_code == 200:
-                    st.session_state.token = resp.json()["access_token"]
+                try:
+                    st.session_state.token = api.login(u, p)
                     st.success("Logged in successfully.")
                     st.rerun()
-                else:
-                    st.error(f"Login failed: {resp.status_code} – {resp.text}")
-
-        else: 
-            st.subheader("Register")
-            new_username = st.text_input("New username", key="reg_user")
-            new_email    = st.text_input("Email",         key="reg_email")
-            new_password = st.text_input("Password",      type="password", key="reg_pw")
+                except Exception as e:
+                    st.error(f"Login failed: {e}")
+        else:
+            u2 = st.text_input("New username", key="reg_user")
+            e2 = st.text_input("Email", key="reg_email")
+            p2 = st.text_input("Password", type="password", key="reg_pw")
             if st.button("Register"):
-                payload = {
-                    "username": new_username,
-                    "email":    new_email,
-                    "password": new_password
-                }
-                reg = requests.post(f"{API_URL}/register", json=payload)
-                if reg.status_code == 200:
+                try:
+                    api.register_user(u2, e2, p2)
                     st.success("Registration successful! You can now log in.")
-                else:
-                    st.error(f"Registration failed: {reg.status_code} – {reg.text}")
-
+                except Exception as e:
+                    st.error(f"Registration failed: {e}")
     st.stop()
-headers = {"Authorization": f"Bearer {st.session_state.token}"}
 
-cat_resp = requests.get(f"{API_URL}/categories/", headers=headers)
-with st.sidebar.expander("Categories Debug"):
-    try:
-        body = cat_resp.json()
-    except ValueError:
-        body = cat_resp.text
-    st.write({
-        "status_code": cat_resp.status_code,
-        "headers": dict(cat_resp.headers),
-        "body": body
-    })
-cat_resp.raise_for_status()
-categories_data = cat_resp.json()
-category_map = {c['name']: c['id'] for c in categories_data}
-id_to_category = {c['id']: c['name'] for c in categories_data}
-categories = list(category_map.keys())
 
-tab_overview, tab_manage = st.tabs(["Overview", "Manage Transactions"])
+headers = api.get_headers()
+cats = api.get_categories()
+category_map   = {c["name"]: c["id"] for c in cats}
+id_to_category = {c["id"]: c["name"] for c in cats}
+categories     = list(category_map.keys())
+categories_by_type = {"income": [], "expense": []}
+for c in cats:
+    categories_by_type[c["type"]].append(c["name"])
+# ─── ST TABS ────────────────────────────────────────────────────────────────────
 
+tab_overview, tab_manage, tab_add = st.tabs(["Overview", "Manage Transactions", "Add Category"])
+
+# ─── OVERVIEW TAB ───────────────────────────────────────────────────────────────
 with tab_overview:
     st.markdown("<h1 style='color:#0A1DEF;'>FinanceTracker</h1>", unsafe_allow_html=True)
-    start_date = st.date_input("Start Date", value=datetime.now().replace(day=1))
-    end_date   = st.date_input("End Date",   value=datetime.now())
-    select_all = st.checkbox("Select All Categories", value=True)
-    if select_all:
-        selected_names = st.multiselect("Categories", categories, default=categories)
-    else:
-        selected_names = st.multiselect("Categories", categories)
+    summary_slot = st.empty()
 
-    params = {
-        "start_date": start_date.isoformat(),
-        "end_date":   end_date.isoformat()
-    }
-    if selected_names:
-        cat_ids = [str(category_map[name]) for name in selected_names]
-        params["category_id"] = ",".join(cat_ids)
+    col_f, col_c1, col_c2 = st.columns([2, 3, 3])
+    with col_f:
+        start_date = st.date_input("Start Date", value=datetime.now().replace(day=1))
+        end_date   = st.date_input("End Date",   value=datetime.now())
+        sel_all    = st.checkbox("Select All Categories", value=True)
+        if sel_all:
+            sel_names = st.multiselect("Categories", categories, default=categories)
+        else:
+            sel_names = st.multiselect("Categories", categories)
 
-    txn_resp = requests.get(
-        f"{API_URL}/transactions/",
-        headers=headers,
-        params=params
-    )
-    txn_resp.raise_for_status()
-    df = pd.DataFrame(txn_resp.json())
+    sel_ids = [category_map[n] for n in sel_names] if sel_names else None
 
-    if df.empty:
-        st.warning("No transactions found for the selected criteria.")
-    else:
+    summary = api.get_summary(start_date.isoformat(), end_date.isoformat(), sel_ids)
+    with summary_slot.container():
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown("### Net Balance")
+            st.markdown(f"<h2>${summary['net_balance']}</h2>", unsafe_allow_html=True)
+        with c2:
+            st.markdown("### Total Income")
+            st.markdown(f"<h2>${summary['total_income']}</h2>", unsafe_allow_html=True)
+        with c3:
+            st.markdown("### Total Expenses")
+            st.markdown(f"<h2>${summary['total_expenses']}</h2>", unsafe_allow_html=True)
+        with c4:
+            st.markdown("### Period")
+            st.markdown(f"<h5>{start_date} to {end_date}</h5>", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    txns = api.get_transactions(start_date.isoformat(), end_date.isoformat(), sel_ids)
+    df = pd.DataFrame(txns)
+    if not df.empty:
         df["Date"]     = pd.to_datetime(df["date"])
         df["Amount"]   = df["amount"]
         df["Category"] = df["category_id"].map(id_to_category)
 
-        sum_params = {
-            "start_date": start_date.isoformat(),
-            "end_date":   end_date.isoformat()
-        }
-        summary = requests.get(
-            f"{API_URL}/analytics/summary",
-            headers=headers,
-            params=sum_params
-        ).json()
+        with col_c1:
+            st.subheader("By Category")
+            pie_data = df.groupby("Category")["Amount"].sum().abs().reset_index()
+            fig1 = px.pie(pie_data, names="Category", values="Amount", hole=0.5)
+            st.plotly_chart(fig1, use_container_width=True)
 
-        k1, k2, k3, k4 = st.columns(4)
-        with k1:
-            st.markdown("### Net Balance")
-            st.markdown(f"<h2>${summary['net_balance']}</h2>", unsafe_allow_html=True)
+        with col_c2:
+            st.subheader("Over Time")
+            fig2 = px.line(df.sort_values("Date"), x="Date", y="Amount")
+            st.plotly_chart(fig2, use_container_width=True)
+    else:
+        col_c1.warning("No transactions found.")
+    # st.markdown("---")
+    # st.header("Recent Transactions")
+    # for _, row in df.sort_values("Date", ascending=False).iterrows():
+    #     cols = st.columns([2, 2, 2, 4, 2])
+    #     cols[0].write(row["type"])
+    #     cols[1].write(row["Date"])
+    #     cols[2].write(row["Category"])
+    #     cols[3].write(row["description"])
+    #     cols[4].write(f"${row['Amount']}")
 
-        with k2:
-            st.markdown("### Total Income")
-            st.markdown(f"<h2>${summary['total_income']}</h2>", unsafe_allow_html=True)
-
-        with k3:
-            st.markdown("### Total Expenses")
-            st.markdown(f"<h2>${summary['total_expenses']}</h2>", unsafe_allow_html=True)
-
-        with k4:
-            st.markdown("### Period")
-            st.markdown(f"<h5>{start_date} to {end_date}</h5>", unsafe_allow_html=True)
-
-        st.markdown("---")
-        st.subheader("Transactions by Category")
-        pie_data = (
-            df
-            .groupby("Category")["Amount"]
-            .sum()
-            .abs()
-            .reset_index()
-        )
-        fig1 = px.pie(pie_data, names="Category", values="Amount", hole=0.5)
-        st.plotly_chart(fig1, use_container_width=True)
-
-        st.subheader("Transactions Over Time")
-        fig2 = px.line(df.sort_values("Date"), x="Date", y="Amount")
-        st.plotly_chart(fig2, use_container_width=True)
-
-        st.markdown("---")
-
-        st.header("Recent Transactions")
-        for _, row in df.sort_values("Date", ascending=False).iterrows():
-            cols = st.columns([2, 2, 2, 4, 2])
-            cols[0].write(row["type"])
-            cols[1].write(row["Date"].date())
-            cols[2].write(row["Category"])
-            cols[3].write(row["description"])
-            cols[4].write(f"${row['Amount']}")
-
-
+# ─── MANAGE TRANSACTIONS TAB ───────────────────────────────────────────────────
 with tab_manage:
     t_create, t_edit = st.tabs(["Create", "Edit/Delete"])
 
     with t_create:
+        st.session_state["current_category"] = "income"
         st.subheader("Add New Transaction")
-        with st.form("create_txn"):  
-            c_type = st.selectbox("Type", ["income", "expense"])
-            c_amount = st.number_input("Amount", format="%.2f")
+        with st.form("create_txn"):
+            c_type        = st.selectbox("Type", ["income", "expense"])
+            c_amount      = st.number_input("Amount", format="%.2f")
             c_description = st.text_input("Description")
-            c_date = st.date_input("Date", value=datetime.now())
-            c_category = st.selectbox("Category", categories)
-            submitted = st.form_submit_button("Create")
+            c_date        = st.date_input("Date", value=datetime.now())
+            c_category    = st.selectbox("Category", categories_by_type[st.session_state["current_category"]])
+            submitted     = st.form_submit_button("Create")
             if submitted:
-                payload = {
+                txn = {
                     "type": c_type,
                     "amount": c_amount,
                     "description": c_description,
                     "date": c_date.isoformat(),
                     "category_id": category_map[c_category],
                 }
-                resp = requests.post(f"{API_URL}/transactions/", json=payload, headers=headers)
-                if resp.status_code == 200:
-                    st.success("Transaction created successfully.")
+                try:
+                    api.create_transaction(txn)
                     st.rerun()
-                else:
-                    st.error(f"Failed: {resp.status_code} - {resp.text}")
+                    st.success("Transaction created.")
+                except Exception as e:
+                    st.error(f"Create failed: {e}")
 
     with t_edit:
         st.subheader("Edit or Delete Transaction")
-        all_txn = requests.get(f"{API_URL}/transactions/", headers=headers).json()
-        if not all_txn:
-            st.warning("No transactions available to edit or delete.")
+        all_txns = api.get_transactions(None, None)  
+        if not all_txns:
+            st.warning("No transactions to manage.")
         else:
-            txn_options = {f"{id_to_category[t['category_id']]} - {t['date']} - {t['amount']}$": t for t in all_txn}
-            choice = st.selectbox("Select Transaction", list(txn_options.keys()))
-            txn = txn_options[choice]
-            with st.form("edit_txn"):  
-                e_type = st.selectbox("Type", ["income", "expense"], index=["income","expense"].index(txn['type']))
-                e_amount = st.number_input("Amount", value=txn['amount'], format="%.2f")
-                e_description = st.text_input("Description", value=txn['description'])
-                e_date = st.date_input("Date", value=pd.to_datetime(txn['date']))
-                e_category = st.selectbox("Category", categories, index=list(categories).index(id_to_category[txn['category_id']]))
-                update = st.form_submit_button("Update")
-                delete = st.form_submit_button("Delete")
-                if update:
-                    up_payload = {
+            options = {
+                f"{id_to_category[t['category_id']]} - {t['date']} - ${t['amount']}": t
+                for t in all_txns
+            }
+            choice = st.selectbox("Select Transaction", options.keys())
+            txn    = options[choice]
+            with st.form("edit_txn"):
+                e_type        = st.selectbox("Type", ["income", "expense"], index=["income","expense"].index(txn["type"]))
+                e_amount      = st.number_input("Amount", value=txn["amount"], format="%.2f")
+                e_description = st.text_input("Description", value=txn["description"])
+                e_date        = st.date_input("Date", value=pd.to_datetime(txn["date"]))
+                e_category    = st.selectbox("Category", categories, index=categories.index(id_to_category[txn["category_id"]]))
+                btn_update    = st.form_submit_button("Update")
+                btn_delete    = st.form_submit_button("Delete")
+                if btn_update:
+                    update = {
                         "type": e_type,
                         "amount": e_amount,
                         "description": e_description,
                         "date": e_date.isoformat(),
                         "category_id": category_map[e_category],
                     }
-                    up_resp = requests.patch(f"{API_URL}/transactions/{txn['id']}", json=up_payload, headers=headers)
-                    if up_resp.status_code == 200:
-                        st.success("Transaction updated successfully.")
+                    try:
+                        api.update_transaction(txn["id"], update)
+                        st.success("Updated.")
                         st.rerun()
-                    else:
-                        st.error(f"Update failed: {up_resp.status_code} - {up_resp.text}")
-                if delete:
-                    del_resp = requests.delete(f"{API_URL}/transactions/{txn['id']}", headers=headers)
-                    if del_resp.status_code == 204:
-                        st.success("Transaction deleted.")
+                    except Exception as e:
+                        st.error(f"Update failed: {e}")
+                if btn_delete:
+                    try:
+                        api.delete_transaction(txn["id"])
+                        st.success("Deleted.")
                         st.rerun()
-                    else:
-                        st.error(f"Delete failed: {del_resp.status_code} - {del_resp.text}")
+                    except Exception as e:
+                        st.error(f"Delete failed: {e}")
+
+# ─── ADD CATEGORY TAB ──────────────────────────────────────────────────────────
+with tab_add:
+    st.header("Add New Category")
+    name = st.text_input("Category Name")
+    type_ = st.selectbox("Category Type", ["expense", "income"])
+    if st.button("Create Category"):
+        if not name.strip():
+            st.warning("Enter a name.")
+        else:
+            try:
+                cat = api.create_category(name.strip(), type_)
+                st.success(f"Created **{cat['name']}** (ID {cat['id']})")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Create failed: {e}")
