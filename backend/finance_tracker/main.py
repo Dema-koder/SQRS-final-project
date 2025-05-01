@@ -1,20 +1,19 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Security
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Annotated
-from typing import List
-from fastapi import Query, Path
+from fastapi import Query
 import sqlite3
 import bcrypt
 import secrets
 from jose import JWTError, jwt
-from finance_tracker.models import *
-from finance_tracker.models import TransactionUpdate
+from backend.finance_tracker.models import *
+from backend.finance_tracker.models import TransactionUpdate
 
 app = FastAPI()
 
 # Database setup
-from finance_tracker.database import setup_database, get_db_connection
+from backend.finance_tracker.database import setup_database, get_db_connection
 setup_database()
 
 # Security config
