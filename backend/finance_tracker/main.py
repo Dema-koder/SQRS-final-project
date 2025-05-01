@@ -7,13 +7,13 @@ import sqlite3
 import bcrypt
 import secrets
 from jose import JWTError, jwt
-from backend.finance_tracker.models import *
-from backend.finance_tracker.models import TransactionUpdate
+from finance_tracker.models import *
+from finance_tracker.models import TransactionUpdate
 
 app = FastAPI()
 
 # Database setup
-from backend.finance_tracker.database import setup_database, get_db_connection
+from finance_tracker.database import setup_database, get_db_connection
 setup_database()
 
 # Security config
