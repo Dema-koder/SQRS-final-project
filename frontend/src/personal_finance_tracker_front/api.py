@@ -2,23 +2,27 @@ import requests
 import streamlit as st
 from typing import Optional, List, Dict
 API_URL = st.secrets["api_url"]
+TIMEOUT = 10
 
 
 def login(username: str, password: str) -> str:
     """Authenticate and return a bearer token."""
-    resp = requests.post(f"{API_URL}/token",
-                         data={"username": username, "password": password})
+    resp = requests.post(
+        f"{API_URL}/token",
+        data={"username": username, "password": password},
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()
     return resp.json()["access_token"]
 
 
 def register_user(username: str, email: str, password: str) -> None:
     """Register a new user."""
-    resp = requests.post(f"{API_URL}/register",
-                         json={"username": username,
-                               "email": email,
-                               "password": password
-                               })
+    resp = requests.post(
+        f"{API_URL}/register",
+        json={"username": username, "email": email, "password": password},
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()
 
 
@@ -29,73 +33,102 @@ def get_headers() -> Dict[str, str]:
 
 def get_categories() -> List[Dict]:
     """Fetch list of categories."""
-    resp = requests.get(f"{API_URL}/categories/", headers=get_headers())
+    resp = requests.get(
+        f"{API_URL}/categories/",
+        headers=get_headers(),
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()
     return resp.json()
 
 
-def create_category(name: str,
-                    type_: str,
+def create_category(name: str, type_: str,
                     is_predefined: bool = False) -> Dict:
     """Create a new category."""
-    payload = {"name": name,
-               "type": type_,
-               "is_predefined": is_predefined}
-    resp = requests.post(f"{API_URL}/categories/",
-                         headers=get_headers(),
-                         json=payload)
+    payload = {
+        "name": name,
+        "type": type_,
+        "is_predefined": is_predefined
+    }
+    resp = requests.post(
+        f"{API_URL}/categories/",
+        headers=get_headers(),
+        json=payload,
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()
     return resp.json()
 
 
-def get_summary(start: str,
-                end: str,
-                category_ids: Optional[List[int]] = None) -> Dict:
+def get_summary(
+    start: str,
+    end: str,
+    category_ids: Optional[List[int]] = None
+) -> Dict:
     """Fetch analytics summary."""
     params = {"start_date": start, "end_date": end}
     if category_ids:
         params["category_id"] = ",".join(map(str, category_ids))
-    resp = requests.get(f"{API_URL}/analytics/summary",
-                        headers=get_headers(),
-                        params=params)
+
+    resp = requests.get(
+        f"{API_URL}/analytics/summary",
+        headers=get_headers(),
+        params=params,
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()
     return resp.json()
 
 
-def get_transactions(start: str,
-                     end: str,
-                     category_ids: Optional[List[int]] = None) -> List[Dict]:
+def get_transactions(
+    start: str,
+    end: str,
+    category_ids: Optional[List[int]] = None
+) -> List[Dict]:
     """Fetch transactions list."""
     params = {"start_date": start, "end_date": end}
     if category_ids:
         params["category_id"] = ",".join(map(str, category_ids))
-    resp = requests.get(f"{API_URL}/transactions/",
-                        headers=get_headers(),
-                        params=params)
+
+    resp = requests.get(
+        f"{API_URL}/transactions/",
+        headers=get_headers(),
+        params=params,
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()
     return resp.json()
 
 
 def create_transaction(txn: Dict) -> Dict:
     """POST a new transaction."""
-    resp = requests.post(f"{API_URL}/transactions/",
-                         headers=get_headers(),
-                         json=txn)
+    resp = requests.post(
+        f"{API_URL}/transactions/",
+        headers=get_headers(),
+        json=txn,
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()
     return resp.json()
 
 
 def update_transaction(txn_id: int, txn: Dict) -> Dict:
     """PATCH an existing transaction."""
-    resp = requests.patch(f"{API_URL}/transactions/{txn_id}",
-                          headers=get_headers(),
-                          json=txn)
+    resp = requests.patch(
+        f"{API_URL}/transactions/{txn_id}",
+        headers=get_headers(),
+        json=txn,
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()
     return resp.json()
 
 
 def delete_transaction(txn_id: int) -> None:
     """DELETE a transaction."""
-    resp = requests.delete(f"{API_URL}/transactions/{txn_id}",
-                           headers=get_headers())
+    resp = requests.delete(
+        f"{API_URL}/transactions/{txn_id}",
+        headers=get_headers(),
+        timeout=TIMEOUT
+    )
     resp.raise_for_status()

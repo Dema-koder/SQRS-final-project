@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime
-import pandas as pd
 from personal_finance_tracker_front import main
 
 
@@ -10,7 +9,9 @@ def mock_streamlit():
     with patch("personal_finance_tracker_front.main.st") as mocked_st:
         mocked_st.session_state = MagicMock()
         mocked_st.session_state.get.return_value = "mock_token"
-        mocked_st.session_state.__getitem__.side_effect = lambda key: "income" if key == "current_category" else MagicMock()
+        mocked_st.session_state.__getitem__.side_effect = (
+            lambda key: "income" if key == "current_category" else MagicMock()
+        )
         mocked_st.form.return_value.__enter__.return_value = MagicMock()
         mocked_st.container.return_value = MagicMock()
         mocked_st.success = MagicMock()
@@ -138,7 +139,9 @@ def test_create_transaction_payload(mock_streamlit, mock_api):
 
     category_map = {"Food": 1, "Salary": 2}
 
-    with patch("personal_finance_tracker_front.main.api.create_transaction") as mock_create:
+    with patch(
+        "personal_finance_tracker_front.main.api.create_transaction"
+    ) as mock_create:
         c_type = "expense"
         c_amount = 100.0
         c_description = "Lunch"
@@ -169,6 +172,8 @@ def test_no_transactions_warning(mock_streamlit, mock_api):
     mock_streamlit.session_state.get.return_value = "mock_token"
     mock_api.get_transactions.return_value = []  # No transactions
 
-    with patch("personal_finance_tracker_front.main.st.warning") as mock_warning:
+    with patch(
+        "personal_finance_tracker_front.main.st.warning"
+    ) as mock_warning:
         main.main_app()
         mock_warning.assert_called_once_with("No transactions to manage.")

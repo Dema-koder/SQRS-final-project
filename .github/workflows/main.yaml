@@ -29,6 +29,13 @@ jobs:
       working-directory: ./backend
       run: poetry install --no-interaction
 
+    - name: Run flake8 (backend)
+      working-directory: ./backend
+      run: |
+        poetry run flake8 finance_tracker tests --count --show-source --statistics
+        # Fail if any errors found
+        poetry run flake8 finance_tracker tests --count --exit-zero | grep -q "0" || exit 1
+
     - name: Run backend tests with coverage
       working-directory: ./backend
       run: |
@@ -51,6 +58,13 @@ jobs:
     - name: Install frontend dependencies
       working-directory: ./frontend
       run: poetry install --no-interaction
+
+    - name: Run flake8 (frontend)
+      working-directory: ./frontend
+      run: |
+        poetry run flake8 src/personal_finance_tracker_front tests --count --show-source --statistics
+        # Fail if any errors found
+        poetry run flake8 src/personal_finance_tracker_front tests --count --exit-zero | grep -q "0" || exit 1
 
     - name: Run frontend tests with coverage
       working-directory: ./frontend
