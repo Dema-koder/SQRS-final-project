@@ -6,8 +6,8 @@ from personal_finance_tracker_front import api
 
 st.set_page_config(layout="wide")
 
+
 def main_app():
-    headers = api.get_headers()
     cats = api.get_categories()
     category_map = {c["name"]: c["id"] for c in cats}
     id_to_category = {c["id"]: c["name"] for c in cats}
@@ -16,12 +16,12 @@ def main_app():
     for c in cats:
         categories_by_type[c["type"]].append(c["name"])
 
-    # ─── ST TABS ────────────────────────────────────────────────────────────────
+    # TABS
     tab_overview, tab_manage, tab_add = st.tabs(
         ["Overview", "Manage Transactions", "Add Category"]
     )
 
-    # ─── OVERVIEW TAB ───────────────────────────────────────────────────────────
+    # OVERVIEW TAB
     with tab_overview:
         st.markdown("<h1 style='color:#0A1DEF;'>FinanceTracker</h1>",
                     unsafe_allow_html=True)
@@ -75,8 +75,13 @@ def main_app():
 
             with col_c1:
                 st.subheader("By Category")
-                pie_data = df.groupby("Category")["Amount"].sum().abs().reset_index()
-                fig1 = px.pie(pie_data, names="Category", values="Amount", hole=0.5)
+                pie_data = df.groupby("Category")["Amount"] \
+                    .sum() \
+                    .abs() \
+                    .reset_index()
+                fig1 = px.pie(pie_data, names="Category",
+                              values="Amount",
+                              hole=0.5)
                 st.plotly_chart(fig1, use_container_width=True)
 
             with col_c2:
@@ -86,7 +91,7 @@ def main_app():
         else:
             col_c1.warning("No transactions found.")
 
-    # ─── MANAGE TRANSACTIONS TAB ────────────────────────────────────────────────
+    # TRANSACTIONS TAB
     with tab_manage:
         t_create, t_edit = st.tabs(["Create", "Edit/Delete"])
 
@@ -127,7 +132,9 @@ def main_app():
                 st.warning("No transactions to manage.")
             else:
                 options = {
-                    f"{id_to_category[t['category_id']]} - {t['date']} - ${t['amount']}": t
+                    f"{id_to_category[t['category_id']]} - \
+                    {t['date']} - \
+                    ${t['amount']}": t
                     for t in all_txns
                 }
                 choice = st.selectbox("Select Transaction", options.keys())
@@ -150,7 +157,8 @@ def main_app():
                     e_category = st.selectbox(
                         "Category",
                         categories,
-                        index=categories.index(id_to_category[txn["category_id"]])
+                        index=categories
+                        .index(id_to_category[txn["category_id"]])
                     )
                     e_is_recurring = st.checkbox(
                         "Is Recurring", value=txn.get("is_recurring", False)
@@ -180,7 +188,7 @@ def main_app():
                         except Exception as e:
                             st.error(f"Delete failed: {e}")
 
-    # ─── ADD CATEGORY TAB ───────────────────────────────────────────────────────
+    # CATEGORY TAB
     with tab_add:
         st.header("Add New Category")
         name = st.text_input("Category Name")
@@ -195,6 +203,7 @@ def main_app():
                     st.rerun()
                 except Exception as e:
                     st.error(f"Create failed: {e}")
+
 
 if "token" not in st.session_state:
     with st.sidebar:
