@@ -33,7 +33,7 @@ jobs:
       working-directory: ./backend
       run: |
         poetry run pytest --cov=finance_tracker --cov-report=term-missing tests/
-        poetry run coverage report --fail-under=66
+        poetry run coverage report --fail-under=85
 
     - name: Run Bandit security scan (backend)
       working-directory: ./backend
@@ -56,7 +56,7 @@ jobs:
       working-directory: ./frontend
       run: |
         poetry run pytest --cov=src/personal_finance_tracker_front --cov-report=term-missing tests/
-        poetry run coverage report --fail-under=85
+        poetry run coverage report --fail-under=66
 
     - name: Run Bandit security scan (frontend)
       working-directory: ./frontend
