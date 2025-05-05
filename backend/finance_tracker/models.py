@@ -2,12 +2,15 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional, Literal
 from datetime import datetime
 
+
 class UserBase(BaseModel):
     username: str
     email: str
 
+
 class UserCreate(UserBase):
     password: str
+
 
 class User(UserBase):
     id: int
@@ -17,12 +20,15 @@ class User(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class CategoryBase(BaseModel):
     name: str
     type: Literal["income", "expense"]
 
+
 class CategoryCreate(CategoryBase):
     is_predefined: bool = False
+
 
 class Category(CategoryBase):
     id: int
@@ -30,6 +36,7 @@ class Category(CategoryBase):
     user_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class TransactionBase(BaseModel):
     amount: float
@@ -44,8 +51,10 @@ class TransactionBase(BaseModel):
     def validate_type(cls, v):
         return v.lower()
 
+
 class TransactionCreate(TransactionBase):
     category_id: int
+
 
 class Transaction(TransactionBase):
     id: int
@@ -55,14 +64,17 @@ class Transaction(TransactionBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class BudgetBase(BaseModel):
     target_amount: float
     start_date: datetime
     end_date: datetime
     name: Optional[str] = None
 
+
 class BudgetCreate(BudgetBase):
     category_id: Optional[int] = None
+
 
 class Budget(BudgetBase):
     id: int
@@ -73,12 +85,15 @@ class Budget(BudgetBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 class TokenData(BaseModel):
     username: Optional[str] = None
+
 
 class TransactionUpdate(BaseModel):
     amount: Optional[float] = None

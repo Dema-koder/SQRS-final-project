@@ -1,21 +1,24 @@
 import sqlite3
 from datetime import datetime
 
-# Register custom datetime adapter to handle deprecation warning
+
 def adapt_datetime(dt):
     return dt.isoformat()
 
+
 sqlite3.register_adapter(datetime, adapt_datetime)
 
+
 DATABASE_NAME = "finance.db"
+
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def setup_database(conn=None):
-    """Initialize the database with all required tables using the provided connection or a new one"""
     if conn is None:
         conn = sqlite3.connect(DATABASE_NAME)
         close_conn = True
@@ -25,10 +28,8 @@ def setup_database(conn=None):
     cursor = conn.cursor()
 
     try:
-        # Enable foreign key constraints
         cursor.execute("PRAGMA foreign_keys = ON")
 
-        # Drop all tables in correct order to avoid foreign key violations
         cursor.execute("DROP TABLE IF EXISTS audit_log")
         cursor.execute("DROP TABLE IF EXISTS budgets")
         cursor.execute("DROP TABLE IF EXISTS transactions")
@@ -47,7 +48,6 @@ def setup_database(conn=None):
             )
         """)
 
-        # Create categories table
         cursor.execute("""
             CREATE TABLE categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,9 +109,12 @@ def setup_database(conn=None):
         """)
 
         # Create indexes
-        cursor.execute("CREATE INDEX idx_transactions_user_date ON transactions(user_id, date)")
-        cursor.execute("CREATE INDEX idx_transactions_category_type ON transactions(category_id, type)")
-        cursor.execute("CREATE INDEX idx_budgets_user_active ON budgets(user_id, is_active)")
+        cursor.execute("CREATE INDEX idx_transactions_user_date "
+                       "ON transactions(user_id, date)")
+        cursor.execute("CREATE INDEX idx_transactions_category_type "
+                       "ON transactions(category_id, type)")
+        cursor.execute("CREATE INDEX idx_budgets_user_active "
+                       "ON budgets(user_id, is_active)")
 
         # Insert predefined categories
         predefined_categories = [
@@ -127,7 +130,8 @@ def setup_database(conn=None):
             ("Other Expenses", "expense", True),
         ]
         cursor.executemany(
-            "INSERT INTO categories (name, type, is_predefined) VALUES (?, ?, ?)",
+            "INSERT INTO categories (name, type, is_predefined) "
+            "VALUES (?, ?, ?)",
             predefined_categories
         )
 
