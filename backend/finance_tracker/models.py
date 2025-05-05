@@ -1,7 +1,6 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, field_validator
+from typing import Optional, Literal
 from datetime import datetime
-from pydantic import validator
 
 class UserBase(BaseModel):
     username: str
@@ -16,15 +15,11 @@ class User(UserBase):
     is_locked: bool = False
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict(from_attributes=True)
 
 class CategoryBase(BaseModel):
     name: str
-    type: str  # 'income' or 'expense'
+    type: Literal["income", "expense"]
 
 class CategoryCreate(CategoryBase):
     is_predefined: bool = False
@@ -34,24 +29,19 @@ class Category(CategoryBase):
     is_predefined: bool
     user_id: Optional[int] = None
 
-    class Config:
-        from_attributes = True  # или orm_mode = True для Pydantic v2
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict(from_attributes=True)
 
 class TransactionBase(BaseModel):
     amount: float
     description: Optional[str] = None
     date: datetime
-    type: str  # 'income' or 'expense'
+    type: Literal["income", "expense"]
     is_recurring: bool = False
     recurrence_pattern: Optional[str] = None
 
-    @validator('type')
+    @field_validator("type")
+    @classmethod
     def validate_type(cls, v):
-        if v.lower() not in ['income', 'expense']:
-            raise ValueError("Type must be either 'income' or 'expense'")
         return v.lower()
 
 class TransactionCreate(TransactionBase):
@@ -63,11 +53,7 @@ class Transaction(TransactionBase):
     category_id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict(from_attributes=True)
 
 class BudgetBase(BaseModel):
     target_amount: float
@@ -81,12 +67,11 @@ class BudgetCreate(BudgetBase):
 class Budget(BudgetBase):
     id: int
     user_id: int
-    category_id: Optional[int]
+    category_id: Optional[int] = None
     current_amount: float
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     access_token: str
@@ -100,12 +85,11 @@ class TransactionUpdate(BaseModel):
     description: Optional[str] = None
     date: Optional[datetime] = None
     category_id: Optional[int] = None
-    type: Optional[str] = None
+    type: Optional[Literal["income", "expense"]] = None
     is_recurring: Optional[bool] = None
     recurrence_pattern: Optional[str] = None
 
-    @validator('type')
+    @field_validator("type")
+    @classmethod
     def validate_type(cls, v):
-        if v is not None and v.lower() not in ['income', 'expense']:
-            raise ValueError("Type must be either 'income' or 'expense'")
         return v.lower() if v else v

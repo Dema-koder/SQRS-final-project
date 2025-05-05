@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from typing import Annotated
 from fastapi import Query
 import sqlite3
@@ -12,8 +12,9 @@ from finance_tracker.models import TransactionUpdate
 
 app = FastAPI()
 
-# Database setup
 from finance_tracker.database import setup_database, get_db_connection
+
+# Initialize database
 setup_database()
 
 # Security config
@@ -33,9 +34,9 @@ def get_password_hash(password: str) -> str:
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -108,7 +109,6 @@ async def register_user(user: UserCreate):
     finally:
         conn.close()
 
-
 @app.post("/transactions/", response_model=Transaction)
 async def create_transaction(
         transaction: TransactionCreate,
@@ -160,13 +160,12 @@ async def create_transaction(
     finally:
         conn.close()
 
-
 @app.get("/transactions/", response_model=list[Transaction])
 async def get_transactions(
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)],
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        category_id: str = Query(None, description="Comma-separated category IDs"),  # Принимаем строку
+        category_id: str = Query(None, description="Comma-separated category IDs"),
         type_: Optional[str] = None
 ):
     conn = get_db_connection()
@@ -187,7 +186,6 @@ async def get_transactions(
             query += " AND date <= ?"
             params.append(end_date.isoformat())
 
-        # Обрабатываем category_id
         if category_id:
             try:
                 category_ids = [int(id.strip()) for id in category_id.split(",")]
@@ -210,7 +208,6 @@ async def get_transactions(
         return [dict(txn) for txn in transactions]
     finally:
         conn.close()
-
 
 @app.post("/categories/", response_model=Category)
 async def create_category(
@@ -241,7 +238,6 @@ async def create_category(
         raise HTTPException(status_code=400, detail="Category already exists")
     finally:
         conn.close()
-
 
 @app.get("/categories/", response_model=list[Category])
 async def get_categories(
@@ -293,7 +289,9 @@ async def create_budget(
         new_budget = conn.execute(
             "SELECT * FROM budgets WHERE id = ?", (budget_id,)
         ).fetchone()
-        return new_budget
+        if not new_budget:
+            raise HTTPException(status_code=400, detail="Budget not found after creation")
+        return dict(new_budget)
     finally:
         conn.close()
 
@@ -311,7 +309,7 @@ async def get_budgets(
             query += " AND is_active = 1 AND date() BETWEEN start_date AND end_date"
 
         budgets = conn.execute(query, params).fetchall()
-        return budgets
+        return [dict(budget) for budget in budgets]
     finally:
         conn.close()
 
@@ -359,16 +357,14 @@ async def get_summary(
     finally:
         conn.close()
 
-
 @app.patch("/transactions/{transaction_id}", response_model=Transaction)
 async def update_transaction(
-        transaction_id: int,  # Обязательный параметр пути
-        current_user: Annotated[sqlite3.Row, Depends(get_current_user)],  # Зависимость
-        transaction_update: TransactionUpdate  # Тело запроса
+        transaction_id: int,
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)],
+        transaction_update: TransactionUpdate
 ):
     conn = get_db_connection()
     try:
-        # Проверяем существование транзакции и принадлежность пользователю
         existing = conn.execute(
             "SELECT * FROM transactions WHERE id = ? AND user_id = ?",
             (transaction_id, current_user["id"])
@@ -377,7 +373,6 @@ async def update_transaction(
         if not existing:
             raise HTTPException(status_code=404, detail="Transaction not found")
 
-        # Собираем поля для обновления
         update_fields = {}
         if transaction_update.amount is not None:
             update_fields["amount"] = transaction_update.amount
@@ -397,7 +392,6 @@ async def update_transaction(
         if not update_fields:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        # Проверяем существование категории, если она указана
         if "category_id" in update_fields:
             category = conn.execute(
                 "SELECT 1 FROM categories WHERE id = ? AND (user_id = ? OR is_predefined = 1)",
@@ -406,7 +400,6 @@ async def update_transaction(
             if not category:
                 raise HTTPException(status_code=400, detail="Invalid category_id")
 
-        # Формируем SQL запрос
         set_clause = ", ".join(f"{field} = ?" for field in update_fields.keys())
         values = list(update_fields.values())
         values.extend([transaction_id, current_user["id"]])
@@ -418,7 +411,6 @@ async def update_transaction(
         )
         conn.commit()
 
-        # Возвращаем обновленную транзакцию
         updated_transaction = conn.execute(
             """SELECT id, user_id, category_id, amount, description, 
                   date, type, is_recurring, recurrence_pattern, created_at 
@@ -441,7 +433,6 @@ async def delete_transaction(
 ):
     conn = get_db_connection()
     try:
-        # Проверяем существование транзакции и принадлежность пользователю
         transaction = conn.execute(
             "SELECT id FROM transactions WHERE id = ? AND user_id = ?",
             (transaction_id, current_user["id"])
@@ -453,7 +444,6 @@ async def delete_transaction(
                 detail="Transaction not found or access denied"
             )
 
-        # Удаляем транзакцию
         cursor = conn.cursor()
         cursor.execute(
             "DELETE FROM transactions WHERE id = ?",

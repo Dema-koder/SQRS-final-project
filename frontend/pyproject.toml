@@ -1,23 +1,25 @@
-[project]
+[tool.poetry]
 name = "personal-finance-tracker-front"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "paveltrty",email = "p.sharygin@innopolis.university"}
-]
+authors = ["paveltrty <p.sharygin@innopolis.university>"]
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = [
-    "streamlit (>=1.44.1,<2.0.0)",
-    "pandas (>=2.2.3,<3.0.0)",
-    "plotly (>=6.0.1,<7.0.0)",
-    "requests (>=2.32.3,<3.0.0)"
-]
-
-[tool.poetry]
 packages = [{include = "personal_finance_tracker_front", from = "src"}]
 
+[tool.poetry.dependencies]
+python = "^3.11"
+streamlit = "^1.44.1"
+pandas = "^2.2.3"
+plotly = "^6.0.1"
+requests = "^2.32.3"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-mock = "^3.12.0"
+pytest-cov = "^4.1.0"
+requests-mock = "^1.12.1"
+flake8 = "^6.1.0"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
