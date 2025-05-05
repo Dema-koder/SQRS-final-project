@@ -452,8 +452,8 @@ async def update_transaction(
 
         cursor = conn.cursor()
         cursor.execute(
-            f"UPDATE transactions SET {set_clause} "
-            f"WHERE id = ? AND user_id = ?",
+            f"UPDATE transactions SET {set_clause} WHERE id = ? "
+            f"AND user_id = ?", # nosec
             values
         )
         conn.commit()

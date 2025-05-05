@@ -1,0 +1,71 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test_and_validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    # Backend setup and tests
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: poetry install --no-interaction
+
+    - name: Run backend tests with coverage
+      working-directory: ./backend
+      run: |
+        poetry run pytest --cov=finance_tracker --cov-report=term-missing tests/
+        poetry run coverage report --fail-under=85
+
+    - name: Run Bandit security scan (backend)
+      working-directory: ./backend
+      run: |
+        echo "Running Bandit for backend..."
+        poetry run bandit -r finance_tracker -ll
+        if poetry run bandit -r finance_tracker -ll | grep -q "No issues identified"; then
+          echo "No backend security issues found"
+        else
+          echo "Backend security issues found"
+          exit 1
+        fi
+
+    # Frontend setup and tests
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: poetry install --no-interaction
+
+    - name: Run frontend tests with coverage
+      working-directory: ./frontend
+      run: |
+        poetry run pytest --cov=src/personal_finance_tracker_front --cov-report=term-missing tests/
+        poetry run coverage report --fail-under=66
+
+    - name: Run Bandit security scan (frontend)
+      working-directory: ./frontend
+      run: |
+        echo "Running Bandit for frontend..."
+        poetry run bandit -r src/personal_finance_tracker_front -ll
+        if poetry run bandit -r src/personal_finance_tracker_front -ll | grep -q "No issues identified"; then
+          echo "No frontend security issues found"
+        else
+          echo "Frontend security issues found"
+          exit 1
+        fi
