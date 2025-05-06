@@ -28,6 +28,7 @@ app.mount("/metrics", metrics_app)
 
 REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP Requests')
 
+
 @app.get("/")
 async def root():
     REQUEST_COUNT.inc()
