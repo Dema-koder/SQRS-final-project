@@ -45,10 +45,7 @@ def main_app():
                                            default=categories)
             else:
                 sel_names = st.multiselect("Categories", categories)
-            
-
         sel_ids = [category_map[n] for n in sel_names] if sel_names else None
-
         summary = api.get_summary(start_date.isoformat(),
                                   end_date.isoformat(), sel_ids)
         with summary_slot.container():
@@ -76,13 +73,13 @@ def main_app():
                                     end_date.isoformat(), sel_ids)
         df = pd.DataFrame(txns)
         if not df.empty:
-                csv_data = df.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="Export Transactions to CSV",
-                    data=csv_data,
-                    file_name=f"transactions_{start_date}_{end_date}.csv",
-                    mime="text/csv"
-                )
+            csv_data = df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Export Transactions to CSV",
+                data=csv_data,
+                file_name=f"transactions_{start_date}_{end_date}.csv",
+                mime="text/csv"
+            )
         if not df.empty:
             df["Date"] = pd.to_datetime(df["date"])
             df["Amount"] = df["amount"]
