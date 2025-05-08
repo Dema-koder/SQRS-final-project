@@ -28,9 +28,9 @@ def get_db_connection():
     Return a connection with database.
 
     Args:
-    
+
     Returns:
-        sqlite3.Connection: open connection of the database 
+        sqlite3.Connection: open connection of the database
     """
     conn = sqlite3.connect(DATABASE_NAME)
     conn.row_factory = sqlite3.Row
@@ -43,9 +43,9 @@ def setup_database(conn=None):
 
     Args:
         conn: active connection with database.
-    
+
     Returns:
-        None 
+        None
     """
     if conn is None:
         conn = sqlite3.connect(DATABASE_NAME)

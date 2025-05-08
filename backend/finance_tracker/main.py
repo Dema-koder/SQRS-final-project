@@ -67,7 +67,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         hashed_password (str): hash of the password (BCrypt).
 
     Returns:
-        bool: True if the password is correct, otherwise False  
+        bool: True if the password is correct, otherwise False
     """
     return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
