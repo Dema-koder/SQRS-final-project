@@ -41,7 +41,7 @@ async def root():
 
     Args:
         None
-    
+
     Returns:
         {"message": "Hello World"}
     """
@@ -65,7 +65,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Args:
         plain_password (str): the password is in clear text.
         hashed_password (str): hash of the password (BCrypt).
-    
+
     Returns:
         bool: True if the password is correct, otherwise False  
     """
@@ -92,7 +92,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     Args:
         data (dict): payload
         expires_delta (timedelta): token lifetime
-    
+
     Returns:
         str: signed jwt
     """
@@ -112,7 +112,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
     Args:
         token: encrypted value
-    
+
     Returns:
         str: current user
     """
@@ -148,7 +148,7 @@ async def login_for_access_token(
 
     Args:
         form_data
-    
+
     Returns:
         access_token
         token_type: bearer
@@ -179,7 +179,7 @@ async def register_user(user: UserCreate):
 
     Args:
         user
-    
+
     Returns:
         None
     """
@@ -220,7 +220,7 @@ async def create_transaction(
     Args:
         transaction
         current_user
-    
+
     Returns:
         None
     """
@@ -290,9 +290,9 @@ async def get_transactions(
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
         start_date: Optional[datetime] = None
         end_date: Optional[datetime] = None
-        category_id: str = Query(None, description="Comma-separated category IDs")
+        category_id: str = Query
         type_: Optional[str] = None
-    
+
     Returns:
         None
     """
@@ -350,7 +350,7 @@ async def create_category(
     Args:
         category: CategoryCreate
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)
-    
+
     Returns:
         None
     """
@@ -395,7 +395,7 @@ async def get_categories(
     Args:
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
         type_: Optional[str] = None
-    
+
     Returns:
         None
     """
@@ -428,7 +428,7 @@ async def create_budget(
     Args:
         budget: BudgetCreate
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
-    
+
     Returns:
         None
     """
@@ -505,7 +505,7 @@ async def get_summary(
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
         start_date: Optional[datetime] = None
         end_date: Optional[datetime] = None
-    
+
     Returns:
         None
     """
@@ -566,7 +566,7 @@ async def update_transaction(
         transaction_id: int
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
         transaction_update: TransactionUpdate
-    
+
     Returns:
         None
     """
@@ -652,7 +652,7 @@ async def delete_transaction(
     Args:
         transaction_id: int
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
-    
+
     Returns:
         None
     """
