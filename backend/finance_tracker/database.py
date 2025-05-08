@@ -1,8 +1,19 @@
+"""Module database."""
+
 import sqlite3
 from datetime import datetime
 
 
 def adapt_datetime(dt):
+    """
+    Convert a datetime object to a string for storage in SQLite.
+
+    Args:
+        dt: Object of date and time.
+
+    Returns:
+        str: String in ISO 8601
+    """
     return dt.isoformat()
 
 
@@ -13,12 +24,29 @@ DATABASE_NAME = "finance.db"
 
 
 def get_db_connection():
+    """
+    Return a connection with database.
+
+    Args:
+    
+    Returns:
+        sqlite3.Connection: open connection of the database 
+    """
     conn = sqlite3.connect(DATABASE_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def setup_database(conn=None):
+    """
+    Create the necessary tables in the database.
+
+    Args:
+        conn: active connection with database.
+    
+    Returns:
+        None 
+    """
     if conn is None:
         conn = sqlite3.connect(DATABASE_NAME)
         close_conn = True

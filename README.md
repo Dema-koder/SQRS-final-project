@@ -2,6 +2,7 @@
 
 [![Development Status](https://img.shields.io/badge/status-in_development-yellow)](#)
 ![workflow](https://github.com/Dema-koder/SQRS-final-project/actions/workflows/main.yaml/badge.svg)
+![Doc Coverage](https://img.shields.io/badge/documentation-100%25-brightgreen)
 
 An application to track finances, including backend API, SQLite database, and Streamlit frontend.
 
@@ -69,3 +70,15 @@ For prometheus, use `docker-compose.yaml` file:
    ```bash
    docker-compose up
 2. Open the prometheus: `localhost:9090`
+
+## Documentation Coverage
+
+This project follows [PEP 257](https://peps.python.org/pep-0257/) docstring conventions and is evaluated using `pydocstyle`.
+
+**Documentation coverage:**  
+✅ 100% of public modules, classes, and functions are documented.
+
+**Verification**:
+To verify this yourself run the following command:
+```bash
+pydocstyle .

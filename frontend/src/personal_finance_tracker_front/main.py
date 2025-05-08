@@ -1,3 +1,8 @@
+"""
+Module main.
+
+The entry point of a frontend application on Streamlit.
+"""
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -8,6 +13,7 @@ st.set_page_config(layout="wide")
 
 
 def main_app():
+    """Run the application."""
     cats = api.get_categories()
     category_map = {c["name"]: c["id"] for c in cats}
     id_to_category = {c["id"]: c["name"] for c in cats}

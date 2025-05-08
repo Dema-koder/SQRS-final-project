@@ -1,3 +1,8 @@
+"""Main module.
+
+FastAPI REST endpoints for managing user transactions.
+"""
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import timedelta, datetime, timezone
@@ -31,6 +36,15 @@ REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP Requests')
 
 @app.get("/")
 async def root():
+    """
+    Root settings.
+
+    Args:
+        None
+    
+    Returns:
+        {"message": "Hello World"}
+    """
     REQUEST_COUNT.inc()
     return {"message": "Hello World"}
 
@@ -45,14 +59,43 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Check whether a simple password matches the specified hash.
+
+    Args:
+        plain_password (str): the password is in clear text.
+        hashed_password (str): hash of the password (BCrypt).
+    
+    Returns:
+        bool: True if the password is correct, otherwise False  
+    """
     return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 
 def get_password_hash(password: str) -> str:
+    """
+    Generate hash with the use of bcrypt library.
+
+    Args:
+        password (str): simple password text.
+
+    Returns:
+        str: encrypted value
+    """
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
+    """
+    Generate JWT token for authorization.
+
+    Args:
+        data (dict): payload
+        expires_delta (timedelta): token lifetime
+    
+    Returns:
+        str: signed jwt
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -64,6 +107,15 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    """
+    Find the current user using token.
+
+    Args:
+        token: encrypted value
+    
+    Returns:
+        str: current user
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -91,6 +143,16 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 @app.post("/token", response_model=Token)
 async def login_for_access_token(
         form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    """
+    Give access token for the user.
+
+    Args:
+        form_data
+    
+    Returns:
+        access_token
+        token_type: bearer
+    """
     conn = get_db_connection()
     user = conn.execute("SELECT * FROM users WHERE username = ?",
                         (form_data.username,)).fetchone()
@@ -112,6 +174,15 @@ async def login_for_access_token(
 
 @app.post("/register", response_model=User)
 async def register_user(user: UserCreate):
+    """
+    User's registration process.
+
+    Args:
+        user
+    
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         hashed_password = get_password_hash(user.password)
@@ -143,6 +214,16 @@ async def create_transaction(
         transaction: TransactionCreate,
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
 ):
+    """
+    Create transaction process.
+
+    Args:
+        transaction
+        current_user
+    
+    Returns:
+        None
+    """
     if transaction.type.lower() not in ['income', 'expense']:
         raise HTTPException(
             status_code=400,
@@ -202,6 +283,19 @@ async def get_transactions(
         Query(None, description="Comma-separated category IDs"),
         type_: Optional[str] = None
 ):
+    """
+    Get transaction process.
+
+    Args:
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
+        start_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None
+        category_id: str = Query(None, description="Comma-separated category IDs")
+        type_: Optional[str] = None
+    
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         query = """
@@ -250,6 +344,16 @@ async def create_category(
         category: CategoryCreate,
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
 ):
+    """
+    Create a new category for the transaction.
+
+    Args:
+        category: CategoryCreate
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)
+    
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -285,6 +389,16 @@ async def get_categories(
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)],
         type_: Optional[str] = None
 ):
+    """
+    Get the categories of the transaction.
+
+    Args:
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
+        type_: Optional[str] = None
+    
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         query = """
@@ -308,6 +422,16 @@ async def create_budget(
         budget: BudgetCreate,
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
 ):
+    """
+    Create the budget.
+
+    Args:
+        budget: BudgetCreate
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
+    
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -343,6 +467,16 @@ async def get_budgets(
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)],
         active_only: bool = True
 ):
+    """
+    Get the budget.
+
+    Args:
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
+        active_only: bool = True
+
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         query = "SELECT * FROM budgets WHERE user_id = ?"
@@ -364,6 +498,17 @@ async def get_summary(
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
 ):
+    """
+    Get the summary of the transactions.
+
+    Args:
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
+        start_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None
+    
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         # Default to current month if no dates provided
@@ -414,6 +559,17 @@ async def update_transaction(
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)],
         transaction_update: TransactionUpdate
 ):
+    """
+    Update the transaction data.
+
+    Args:
+        transaction_id: int
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
+        transaction_update: TransactionUpdate
+    
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         existing = conn.execute(
@@ -490,6 +646,16 @@ async def delete_transaction(
         transaction_id: int,
         current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
 ):
+    """
+    Delete the transaction.
+
+    Args:
+        transaction_id: int
+        current_user: Annotated[sqlite3.Row, Depends(get_current_user)]
+    
+    Returns:
+        None
+    """
     conn = get_db_connection()
     try:
         transaction = conn.execute(

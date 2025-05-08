@@ -1,3 +1,10 @@
+"""
+Module api.
+
+Defines functions for communicating with the Finance Tracker backend service.
+Each function wraps an HTTP request to the corresponding REST endpoint.
+"""
+
 import requests
 import streamlit as st
 from typing import Optional, List, Dict
