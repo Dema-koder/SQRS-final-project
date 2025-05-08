@@ -48,7 +48,6 @@ app.mount("/metrics", metrics_app)
 REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP Requests')
 
 
-
 @app.get("/trigger-error")
 async def trigger_error():
     1 / 0
