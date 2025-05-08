@@ -5,6 +5,8 @@ services:
       - "8000:8000"
     environment:
       - APP_ENV=development
+      - SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
+      - SENTRY_ENVIRONMENT=production
     volumes:
       - .:/app
       - ./finance.db:/app/finance.db

@@ -25,6 +25,20 @@ from finance_tracker.models import Token
 from finance_tracker.models import TokenData
 from finance_tracker.database import setup_database, get_db_connection
 from prometheus_client import make_asgi_app, Counter
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+
+sentry_sdk.init(
+    dsn="https://examplePublicKey@o0.ingest.sentry.io/0",
+    integrations=[
+        FastApiIntegration(),
+        SqlalchemyIntegration(),
+    ],
+    traces_sample_rate=1.0,
+    environment="development"
+)
 
 
 app = FastAPI()
@@ -32,6 +46,13 @@ metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
 
 REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP Requests')
+
+
+
+@app.get("/trigger-error")
+async def trigger_error():
+    1 / 0
+    return {"message": "This code never execute"}
 
 
 @app.get("/")
